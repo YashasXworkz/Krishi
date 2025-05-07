@@ -1,43 +1,41 @@
 <?php
 
-include('./php/config.php');
+include "./php/config.php";
 
 session_start();
 
-if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
-{
+if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     header("location: index.php");
 }
-
 ?>
 
 <!DOCTYPE html>
 <html>
+
 <head>
 	<title>Customer</title>
 	<meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible"content="IE=edge,chrome=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="HandheldFriendly" content="true">
 
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
-
     <link rel="stylesheet" type="text/css" href="./css/customstyle1.css">
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
 </head>
-<body>
 
+<body>
 	<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="#"><img src="./assets/Logokrishi.png" class="img-responsive"></a>
         </div>
         <div class="navtoggle">
-	        <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar" aria-expanded="false"
+          aria-controls="navbar">
 	        	<span class="navbar-toggler-icon"></span>
 	        </button>
     	</div>
@@ -76,7 +74,9 @@ if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
 		</div>
 		<div class="col-lg-3">
 			<div class="row">
-				<div class="col-lg-4"><h1>02</h1></div>
+        <div class="col-lg-4">
+          <h1>02</h1>
+        </div>
 				<div class="col-lg-5 abouticon">
 					<img src="./assets/plant.svg" class="img-responsive" width="100%">
 				</div>
@@ -90,7 +90,9 @@ if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
 		</div>
 		<div class="col-lg-3">
 			<div class="row">
-				<div class="col-lg-4"><h1>03</h1></div>
+        <div class="col-lg-4">
+          <h1>03</h1>
+        </div>
 				<div class="col-lg-5 abouticon">
 					<img src="./assets/fertilizer.svg" class="img-responsive" width="100%">
 				</div>
@@ -104,7 +106,9 @@ if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
 		</div>
 		<div class="col-lg-3">
 			<div class="row">
-				<div class="col-lg-4"><h1>04</h1></div>
+        <div class="col-lg-4">
+          <h1>04</h1>
+        </div>
 				<div class="col-lg-5 abouticon">
 					<img src="./assets/orchard.svg" class="img-responsive" width="100%">
 				</div>
@@ -120,7 +124,7 @@ if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
 
 	<div class="container-fluid" id="shop" style="padding-top: 10%;">
 		<div class="heading">
-			<h1 align="center">OUR  PRODUCTS</h1>
+      <h1 align="center">OUR PRODUCTS</h1>
 		</div>
 		<div class="subhead">
 			<p>Fresh from the Farm!</p>
@@ -132,74 +136,81 @@ if(!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !==true)
 		$results = mysqli_query($conn, "SELECT * from product");
 	?>
 
-	<div class="container-fluid py-3">
-		<!-- <div class="row prod m-0"> -->
+  <div class="container-fluid py-2">
 		<?php
-		$i=0;
-		while($row = mysqli_fetch_array($results))
-		{
-				if($i%3==0)
-				{ ?>
-					<div class="row prod m-0 py-3">
+    $i = 0;
+    while ($row = mysqli_fetch_array($results)) {
+        if ($i % 4 == 0) { ?>
+    <div class="row prod m-0 py-1">
 				<?php } ?>
 				
-				<div class="product col-lg-4">
+      <div class="product col-lg-3 px-2 py-1">
 				<div class="card">
-					<img class="card-img-top" src="./assets/<?php echo $row["prodname"]; ?>.png" alt="Card image cap">
-					<div class="card-body">
-						<h5 class="card-title" id=<?php echo $row['prodid']; ?> > <?php echo $row['prodname']; ?> </h5>
-						<p class="card-text py-2"><?php 
-							$prodid = $row['prodid'];
-							$res = mysqli_query($conn, "SELECT * from myshop where prodid='$prodid' and price = (select min(price) from myshop where prodid='$prodid' and flag=1) and flag=1");
+					<?php
+$img_path = "./assets/" . strtolower($row["prodname"]) . ".png";
+$img_path_alt = "./assets/" . $row["prodname"] . ".png";
+?>
+<img class="card-img-top" src="<?php echo file_exists($img_path) ? $img_path : $img_path_alt; ?>" alt="<?php echo $row["prodname"]; ?>" onerror="this.src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADICAYAAABS39xVAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAHGUlEQVR4nO3dz6+ddR3G8fdDW6BQCgVKW0AKpRSQIggSQIwLhLhwYVyYsDDRuHDhwsTEjYm/gAsTE+PCBQsXJiRuDCFEQkgEAkJBkBYolEJLoS29LW1vF+dMuA3tvefec77nPM/zfr+Sm5vknvs8n/TmfXPuPd/zHEeEAKCAqbEHAIBxESwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABlECwAZRAsAGUQLABl/A/TbkIQNiJV9QAAAABJRU5ErkJggg==';">
+          <div class="card-body py-2 px-2">
+            <h5 class="card-title mb-1" id=<?php echo $row["prodid"]; ?>> <?php echo $row["prodname"]; ?> </h5>
+            <p class="card-text py-1"><?php
+            $prodid = $row["prodid"];
+            $res = mysqli_query(
+                $conn,
+                "SELECT * from myshop where prodid='$prodid' and price = (select min(price) from myshop where prodid='$prodid')"
+            );
 							$row1 = mysqli_fetch_array($res);
-							if($row1)
-							{
-								echo "₹",$row1['price'], " per kg";	?>
+            if ($row1) {
+                echo "₹", $row1["price"], " per kg"; ?>
 								<form id="addcart" action="./php/addtocart.php" method="post">
-									<button name="add" class="btn addtocart" value="<?php echo $row['prodid'],",",$row1['farmerid'],",",$row1['price']; ?>" onclick="adding('<?php echo $row['prodname']; ?>')">
+              <button name="add" class="btn addtocart"
+                value="<?php echo $row["prodid"], ",", $row1["farmerid"], ",", $row1["price"]; ?>"
+                onclick="adding('<?php echo $row["prodname"]; ?>')">
 										<span><i class="fa fa-shopping-cart fa-lg" aria-hidden="true"></i></span>
 									</button>
 								</form>
 							<?php
-							}
-							else
-							{
+            } else {
 								echo "Out Of Stock";
 							}
-							
 						?></p>
-						
 					</div>
 				</div>
 				</div>
-				<?php if($i%3==2)
-				{ ?>
+      <?php if ($i % 4 == 3) { ?>
 					</div>
 				<?php } ?>
 
 				<?php $i++; ?>
 
-		<?php } ?>
+    <?php
+    }
+    
+    // Close the last row if the number of products isn't a multiple of 4
+    if ($i % 4 != 0) {
+        echo "</div>";
+    }
+    ?>
 	</div>
 
 	<div class="container-fluid text-center mt-5">
-		<a href="cart.php"><button class="btn" style="font-weight: 600; padding: 20px; background-color: #ffcd3c;">GO TO CART <span><i class="fa fa-shopping-cart fa-lg" aria-hidden="true"></i></span></button></a>
+    <a href="cart.php"><button class="btn" style="font-weight: 600; padding: 20px; background-color: #ffcd3c;">GO TO
+        CART <span><i class="fa fa-shopping-cart fa-lg" aria-hidden="true"></i></span></button></a>
 	</div>
 
 	<div class="container-fluid py-2 mt-5" style="background-color: #216353; font-weight: 600;">
     	<div class="col-lg-12 text-center">
-    		© 2020 Copyright <a href="#" style="text-decoration: none; color: inherit">KrishiMitra</a>
+      © 2025 Copyright <a href="#" style="text-decoration: none; color: inherit">KrishiMitra</a>
     	</div>
     </div>
 
     <script type="text/javascript">
-    	function adding(prod)
-    	{
-    		alert("1 kg "+prod+" added to cart");
+  function adding(prod) {
+    alert("1 kg " + prod + " added to cart");
     	}
     </script>
-
 	<script type="text/javascript" src="./scripts/customscript.js"></script>
 
 </body>
+
 </html>

@@ -4,33 +4,23 @@ require_once "config.php";
 $username = $password = $confirm_password = $addr = $mobile = $name = "";
 $username_err = $password_err = $confirm_password_err = "";
 
-if ($_SERVER['REQUEST_METHOD'] == "POST")
-{
-
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check if username is empty
-    if(empty(trim($_POST["email"])))
-    {
+    if (empty(trim($_POST["email"]))) {
         $username_err = "Username cannot be blank";
-    }
-    else
-    {
-
+    } else {
       //echo ($_POST["email"]);
 
-      if(!isset($_POST['checkbox1']))
-      {
+        if (!isset($_POST["checkbox1"])) {
         $sql = "SELECT userid FROM users WHERE username = ?";
-      }
-      else
-      {
+        } else {
         $sql = "SELECT farmerid FROM farmer WHERE username = ?";
       }
         //$stmt = mysqli_stmt_init($conn);
         //echo "hi";
         $stmt = mysqli_prepare($conn, $sql);
         //echo "hello : ", $stmt;
-        if($stmt)
-        {
+        if ($stmt) {
             mysqli_stmt_bind_param($stmt, "s", $param_username);
 
             // Set the value of param username
@@ -38,66 +28,65 @@ if ($_SERVER['REQUEST_METHOD'] == "POST")
             //echo "username::: ", $param_username;
 
             // Try to execute this statement
-            if(mysqli_stmt_execute($stmt))
-            {
+            if (mysqli_stmt_execute($stmt)) {
                 mysqli_stmt_store_result($stmt);
-                if(mysqli_stmt_num_rows($stmt) == 1)
-                {
+                if (mysqli_stmt_num_rows($stmt) == 1) {
                     $username_err = "This username is already taken"; 
-                }
-                else
-                {
+                } else {
                     $username = trim($_POST["email"]);
                     //echo "username: : ", $username;
                 }
-            }
-            else
-            {
+            } else {
                 echo "Something went wrong";
             }
             mysqli_stmt_close($stmt);
         }
-
-
       }
 
-
 // Check for password
-if(empty(trim($_POST['password']))){
+    if (empty(trim($_POST["password"]))) {
     $password_err = "Password cannot be blank";
-}
-elseif(strlen(trim($_POST['password'])) < 5){
+    } elseif (strlen(trim($_POST["password"])) < 5) {
     $password_err = "Password cannot be less than 5 characters";
-}
-else{
-    $password = trim($_POST['password']);
-    $addr = trim($_POST['addr']);
-    $mobile = trim($_POST['mobile']);
-    $name = trim($_POST['name']);
-    $gender = trim($_POST['gender']);   
+    } else {
+        $password = trim($_POST["password"]);
+        $addr = trim($_POST["addr"]);
+        $mobile = trim($_POST["mobile"]);
+        $name = trim($_POST["name"]);
+        $gender = trim($_POST["gender"]);
 }
 // Check for confirm password field
-if(trim($_POST['password']) !=  trim($_POST['confirm_password'])){
+    if (trim($_POST["password"]) != trim($_POST["confirm_password"])) {
     $password_err = "Passwords should match";
     die($password_err);
 }
 
-
 // If there were no errors, go ahead and insert into the database
-if(empty($username_err) && empty($password_err) && empty($confirm_password_err))
-{
-  if(!isset($_POST['checkbox1']))
-  {
-    $sql = "INSERT INTO users (username,password,name,address,mobile,gender) VALUES (?,?,?,?,?,?)";
+    if (
+        empty($username_err) &&
+        empty($password_err) &&
+        empty($confirm_password_err)
+    ) {
+        if (!isset($_POST["checkbox1"])) {
+            $sql =
+                "INSERT INTO users (username,password,name,address,mobile,gender) VALUES (?,?,?,?,?,?)";
   } else {
-    $sql = "INSERT INTO farmer (username,password,name,address,mobile,gender) VALUES (?,?,?,?,?,?)";
+            $sql =
+                "INSERT INTO farmer (username,password,name,address,mobile,gender) VALUES (?,?,?,?,?,?)";
   }
-   
 
     $stmt = mysqli_prepare($conn, $sql);
-    if ($stmt)
-    {
-        mysqli_stmt_bind_param($stmt, "ssssss", $param_username, $param_password,$param_name,$param_address,$param_mobile,$param_gender);
+        if ($stmt) {
+            mysqli_stmt_bind_param(
+                $stmt,
+                "ssssss",
+                $param_username,
+                $param_password,
+                $param_name,
+                $param_address,
+                $param_mobile,
+                $param_gender
+            );
 
         // Set these parameters
         $param_username = $username;
@@ -106,15 +95,12 @@ if(empty($username_err) && empty($password_err) && empty($confirm_password_err))
         $param_name = $name;
         $param_mobile = $mobile;
         $param_gender = $gender;
-      
 
         // Try to execute the query
-        if (mysqli_stmt_execute($stmt))
-        {
+            if (mysqli_stmt_execute($stmt)) {
             //echo "Username: ", $param_username;  
             header("location: ../index.php");
-        }
-        else{
+            } else {
             echo "Something went wrong... cannot redirect!";
         }
     }
@@ -122,40 +108,42 @@ if(empty($username_err) && empty($password_err) && empty($confirm_password_err))
 }
 mysqli_close($conn);
 }
-
 ?>
 
-
-
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
+
   <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="../css/styleregister.css">
     <title>Register</title>
   </head>
+
   <body>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="background-color: #3797a4!important;">
-  <a class="navbar-brand" href="/Farmers-portal/index.html">Krishi Mitra</a>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+    <a class="navbar-brand" href="../index.php">Krishi Mitra</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+      aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
   <div class="collapse navbar-collapse" id="navbarNavDropdown">
   <ul class="navbar-nav">
       <li class="nav-item active">
-        <a class="nav-link" href="..//index.html">Home <span class="sr-only">(current)</span></a>
+          <a class="nav-link" href="../index.php">Home <span class="sr-only">(current)</span></a>
       </li>
       <li class="nav-item">
         <a class="nav-link" href="register.php">Register</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="login3.php">Login</a>
+          <a class="nav-link" href="../index.php">Login</a>
       </li>
     </ul>
   </div>
@@ -163,23 +151,29 @@ mysqli_close($conn);
 
 <div class="container mt-4">
 <h3>Please Register Here:</h3>
+    <div class="alert alert-info">
+      <i class="fa fa-info-circle"></i> You can log in with either your email address or phone number after registration.
+    </div>
 <hr>
 <form action="" method="post">
 
     <div class="form-group">
       <label for="inputEmail4">Name</label>
-      <input type="text" class="form-control" name="name" id="inputEmail4" placeholder="Name"required>
+        <input type="text" class="form-control" name="name" id="inputEmail4" placeholder="Name" required>
     </div>
  
     <div class="form-row">
     <div class="form-group col-md-6">
       <label for="inputEmail4">Email</label>
-      <input type="email" class="form-control" name="email" id="inputEmail4" placeholder="Email"required>
+          <input type="email" class="form-control" name="email" id="inputEmail4" placeholder="Email" required>
+          <small class="form-text text-muted">You can use this email to log in.</small>
     </div>
 
     <div class="form-group col-md-6">
       <label for="inputEmail4">Mobile</label>
-      <input type="text" class="form-control" name="mobile" id="inputEmail4" placeholder="10-digit Mobile no"required>
+          <input type="text" class="form-control" name="mobile" id="inputEmail4" placeholder="10-digit Mobile no"
+            required>
+          <small class="form-text text-muted">You can use this mobile number to log in.</small>
     </div>
     </div>
 
@@ -187,20 +181,22 @@ mysqli_close($conn);
     <div class="form-row">
       <div class="form-group col-md-6">
         <label for="inputPassword4">Password</label>
-        <input type="password" class="form-control" name ="password" id="inputPassword4" placeholder="Password" required>
+          <input type="password" class="form-control" name="password" id="inputPassword4" placeholder="Password"
+            required>
       </div>
 
       <div class="form-group col-md-6">
         <label for="inputPassword4">Confirm Password</label>
-        <input type="password" class="form-control" name ="confirm_password" id="inputPassword" placeholder="Confirm Password" required>
+          <input type="password" class="form-control" name="confirm_password" id="inputPassword"
+            placeholder="Confirm Password" required>
       </div>
     </div>
 
     <div class="form-row">
     <div class="form-group col-md-4">
       <label for="gender">Gender</label>
-      <select id="gender" name="mobile" class="form-control">
-        <option selected></option>
+          <select id="gender" name="gender" class="form-control">
+            <option selected>-----------------</option>
         <option>Male</option>
         <option>Female</option>
         <option>Others</option>
@@ -208,18 +204,18 @@ mysqli_close($conn);
     </div>
   </div>
 
-  <div class="form-group">
-    <label for="inputAddress2">Address</label>
-    <input type="text" class="form-control" name = "addr" id="inputAddress2" placeholder="Address" required>
-  </div>
   <div class="form-row">
     <div class="form-group col-md-6">
+          <label for="inputAddress2">Address</label>
+          <input type="text" class="form-control" name="addr" id="inputAddress2" placeholder="Address" required>
+        </div>
+        <div class="form-group col-md-4">
       <label for="inputCity">City</label>
-      <input type="text" class="form-control" id="inputCity"required>
+          <input type="text" class="form-control" id="inputCity" placeholder="City" required>
     </div>
     <div class="form-group col-md-2">
       <label for="inputZip">Zip</label>
-      <input type="text" class="form-control" id="inputZip">
+          <input type="text" class="form-control" id="inputZip" placeholder="Zip">
     </div>
   </div>
   <div class="form-group">
@@ -236,8 +232,15 @@ mysqli_close($conn);
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous">
+  </script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous">
+  </script>
   </body>
+
 </html>
