@@ -1,5 +1,5 @@
 # Farmers-portal
-It is a web platform, 'Krishi Mitra', built using HTML/CSS/Bootstrap for the front end and PHP for the backend. It allows consumers to buy farm fresh products at their best prices online and for Farmers to sell their produce following the e-commerce paradigm.
+<!-- It is a web platform, 'Krishi Mitra', built using HTML/CSS/Bootstrap for the front end and PHP for the backend. It allows consumers to buy farm fresh products at their best prices online and for Farmers to sell their produce following the e-commerce paradigm.
 
 - Install XAMPP to run the PHP server locally on your machine. Use MySQL for database management.
 
@@ -28,4 +28,4 @@ A. Dashboard<br>
 B. Inventory Management<br>
 <img width="793" alt="Screenshot 2023-09-29 at 11 00 05 AM" src="https://github.com/rashi-bhansali/Farmers-portal/assets/52106856/48389750-5cac-4eb7-839e-69f6fad7cabe"><br>
 C. Order Tracking<br>
-<img width="457" alt="Screenshot 2023-09-29 at 11 00 26 AM" src="https://github.com/rashi-bhansali/Farmers-portal/assets/52106856/afddf363-e2cd-4695-9e89-5d1937911277"><br>
+<img width="457" alt="Screenshot 2023-09-29 at 11 00 26 AM" src="https://github.com/rashi-bhansali/Farmers-portal/assets/52106856/afddf363-e2cd-4695-9e89-5d1937911277"><br> -->
