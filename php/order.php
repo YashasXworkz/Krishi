@@ -124,11 +124,16 @@ if (isset($_POST["delete"])) {
     
     // Get the cancellation reason
     if (isset($_POST["cancel_reason"])) {
-        if ($_POST["cancel_reason"] == "Other" && !empty($_POST["other_reason"])) {
+        if ($_POST["cancel_reason"] == "other" && !empty($_POST["other_reason"])) {
             $cancel_reason = $_POST["other_reason"];
         } else {
             $cancel_reason = $_POST["cancel_reason"];
         }
+    }
+    
+    if (empty($cancel_reason)) {
+        header("Location: order.php?error=missing_reason");
+        exit();
     }
     
     // Get order items - use prepared statement
@@ -137,6 +142,8 @@ if (isset($_POST["delete"])) {
     $items_stmt->execute();
     $items_result = $items_stmt->get_result();
     $items_stmt->close();
+    
+    $success = true; // Track if all operations succeed
     
     while ($orderinfo = $items_result->fetch_assoc()) {
         $orderquant = $orderinfo["quantity"];
@@ -147,31 +154,45 @@ if (isset($_POST["delete"])) {
         $status_stmt = $conn->prepare("UPDATE myorder SET status = ?, cancellation_reason = ? WHERE orderid = ?");
         $cancelled_status = ORDER_CANCELLED; // Use the constant instead of hardcoded value
         $status_stmt->bind_param("isi", $cancelled_status, $cancel_reason, $orderid);
-        $status_stmt->execute();
+        $status_result = $status_stmt->execute();
         $status_stmt->close();
+        
+        if (!$status_result) {
+            $success = false;
+            break;
+        }
         
         // Update inventory - use prepared statement
         $inventory_stmt = $conn->prepare("UPDATE myshop SET quantity = quantity + ? WHERE farmerid = ? AND prodid = ?");
         $inventory_stmt->bind_param("iii", $orderquant, $item_farmerid, $prodid);
-        $inventory_stmt->execute();
+        $inventory_result = $inventory_stmt->execute();
         $inventory_stmt->close();
+        
+        if (!$inventory_result) {
+            $success = false;
+            break;
+        }
+    }
+    
+    if ($success) {
+        header("Location: order.php?order_cancelled=1");
+        exit();
+    } else {
+        header("Location: order.php?error=cancel_failed");
+        exit();
     }
 }
 
 // Process direct rejection of return request
-if (isset($_POST['direct_reject'])) {
+if (isset($_POST['reject_reason']) && isset($_POST['orderid']) && isset($_POST['userid']) && isset($_POST['prodid'])) {
     $order_id = $_POST['orderid'];
     $product_id = $_POST['prodid'];
     $user_id = $_POST['userid'];
-    $reject_reason = "";
+    $reject_reason = $_POST['reject_reason'];
     
-    // Get the rejection reason
-    if (isset($_POST["reject_reason"])) {
-        if ($_POST["reject_reason"] == "Other" && !empty($_POST["other_reject_reason"])) {
-            $reject_reason = $_POST["other_reject_reason"];
-        } else {
-            $reject_reason = $_POST["reject_reason"];
-        }
+    // If the reason is empty, check for other_reject_reason
+    if (empty($reject_reason) && isset($_POST['other_reject_reason']) && !empty($_POST['other_reject_reason'])) {
+        $reject_reason = $_POST['other_reject_reason'];
     }
     
     if (empty($order_id) || empty($product_id) || empty($user_id) || empty($reject_reason)) {
@@ -373,6 +394,25 @@ if (isset($_POST['direct_reject'])) {
     border-radius: 5px;
   }
   
+  /* Modal fixes for proper display */
+  .modal {
+    z-index: 1050;
+  }
+  
+  .modal-backdrop {
+    z-index: 1040;
+  }
+  
+  .modal-dialog {
+    margin: 30px auto;
+    max-width: 500px;
+  }
+  
+  .modal-content {
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  }
+  
   /* Extra spacing for order status section */
   .mt-3 {
     margin-top: 1.5rem !important;
@@ -435,6 +475,12 @@ if (isset($_POST['direct_reject'])) {
         <strong>Success!</strong> You have rejected the return request.
         </div>';
     }
+    if (isset($_GET['order_cancelled'])) {
+      echo '<div class="alert alert-info alert-dismissible fade show" style="margin-top: 15px; font-size: 1.2em; padding: 15px;">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <strong>Success!</strong> The order has been cancelled and items returned to your inventory.
+        </div>';
+    }
     if (isset($_GET['error'])) {
       $error_message = "An error occurred while processing your request.";
       if ($_GET['error'] == 'invalid_request') {
@@ -443,6 +489,10 @@ if (isset($_POST['direct_reject'])) {
         $error_message = "Failed to update order status. Please try again later.";
       } else if ($_GET['error'] == 'missing_data') {
         $error_message = "Missing required data for processing the return.";
+      } else if ($_GET['error'] == 'missing_reason') {
+        $error_message = "Please provide a reason for cancellation or rejection.";
+      } else if ($_GET['error'] == 'cancel_failed') {
+        $error_message = "Failed to cancel the order. Please try again or contact support.";
       } else if ($_GET['error'] == 'query_failed') {
         $error_message = "Database query failed. Please contact the administrator.";
       } else if ($_GET['error'] == 'product_query_failed') {
@@ -548,56 +598,96 @@ if (isset($_POST['direct_reject'])) {
                                 </form>
                               </div>
                               <div class="col-md-6">
-                                <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#rejectModal' . htmlspecialchars($orderid) . htmlspecialchars($prodid) . '">
+                                <button type="button" id="rejectBtn' . $orderid . '_' . $prodid . '" class="btn btn-danger btn-sm">
                                   <i class="fa fa-times"></i> Reject Return
                                 </button>
                               </div>
                             </div>';
                       
-                      // Reject modal
-                      echo '<div class="modal fade" id="rejectModal' . htmlspecialchars($orderid) . htmlspecialchars($prodid) . '" tabindex="-1" role="dialog">
-                              <div class="modal-dialog" role="document">
-                                <div class="modal-content">
-                                  <div class="modal-header">
-                                    <h5 class="modal-title">Reject Return Request</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                      <span aria-hidden="true">&times;</span>
-                                    </button>
+                      // Add an inline rejection form that will be initially hidden
+                      echo '<div id="rejectFormContainer' . $orderid . '_' . $prodid . '" style="display:none; margin-top:15px; background-color:#f8f9fa; padding:15px; border-radius:5px; border:1px solid #dee2e6;">
+                              <form method="POST" action="order.php" id="rejectForm' . $orderid . '_' . $prodid . '">
+                                <input type="hidden" name="orderid" value="' . $orderid . '">
+                                <input type="hidden" name="prodid" value="' . $prodid . '">
+                                <input type="hidden" name="userid" value="' . $userid . '">
+                                
+                                <div class="form-group">
+                                  <label><strong>Select a reason for rejecting the return:</strong></label>
+                                  <div class="custom-control custom-radio mt-2">
+                                    <input type="radio" id="reason1_' . $orderid . '_' . $prodid . '" name="reject_reason" value="The return period has expired" class="custom-control-input" required>
+                                    <label class="custom-control-label" for="reason1_' . $orderid . '_' . $prodid . '">The return period has expired</label>
                                   </div>
-                                  <form method="POST" action="">
-                                    <div class="modal-body">
-                                      <input type="hidden" name="orderid" value="' . htmlspecialchars($orderid) . '">
-                                      <input type="hidden" name="prodid" value="' . htmlspecialchars($prodid) . '">
-                                      <input type="hidden" name="userid" value="' . htmlspecialchars($userid) . '">
-                                      <div class="form-group">
-                                        <label><strong>Please select a reason for rejecting return:</strong></label>
-                                        <div class="custom-control custom-radio mt-2">
-                                          <input type="radio" id="reject_reason1_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '" name="reject_reason" value="The return period has expired" class="custom-control-input" required>
-                                          <label class="custom-control-label" for="reject_reason1_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '">The return period has expired</label>
-                                        </div>
-                                        <div class="custom-control custom-radio mt-2">
-                                          <input type="radio" id="reject_reason2_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '" name="reject_reason" value="Product appears to be used/consumed" class="custom-control-input">
-                                          <label class="custom-control-label" for="reject_reason2_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '">Product appears to be used/consumed</label>
-                                        </div>
-                                        <div class="custom-control custom-radio mt-2">
-                                          <input type="radio" id="reject_reason3_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '" name="reject_reason" value="Product quality was as described" class="custom-control-input">
-                                          <label class="custom-control-label" for="reject_reason3_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '">Product quality was as described</label>
-                                        </div>
-                                        <div class="custom-control custom-radio mt-2">
-                                          <input type="radio" id="reject_reason4_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '" name="reject_reason" value="Other" class="custom-control-input">
-                                          <label class="custom-control-label" for="reject_reason4_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '">Other (please specify)</label>
-                                        </div>
-                                        <textarea id="other_reject_reason_' . htmlspecialchars($orderid) . '_' . htmlspecialchars($prodid) . '" name="other_reject_reason" class="form-control mt-2" style="display: none;" placeholder="Please specify reason"></textarea>
-                                      </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                      <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                      <button type="submit" class="btn btn-danger" name="direct_reject">Reject Return</button>
-                                    </div>
-                                  </form>
+                                  <div class="custom-control custom-radio mt-2">
+                                    <input type="radio" id="reason2_' . $orderid . '_' . $prodid . '" name="reject_reason" value="Product appears to be used/consumed" class="custom-control-input">
+                                    <label class="custom-control-label" for="reason2_' . $orderid . '_' . $prodid . '">Product appears to be used/consumed</label>
+                                  </div>
+                                  <div class="custom-control custom-radio mt-2">
+                                    <input type="radio" id="reason3_' . $orderid . '_' . $prodid . '" name="reject_reason" value="Product quality was as described" class="custom-control-input">
+                                    <label class="custom-control-label" for="reason3_' . $orderid . '_' . $prodid . '">Product quality was as described</label>
+                                  </div>
+                                  <div class="custom-control custom-radio mt-2">
+                                    <input type="radio" id="reason4_' . $orderid . '_' . $prodid . '" name="reject_reason" value="other" class="custom-control-input">
+                                    <label class="custom-control-label" for="reason4_' . $orderid . '_' . $prodid . '">Other (please specify)</label>
+                                  </div>
+                                  <textarea id="other_reject_reason_' . $orderid . '_' . $prodid . '" name="other_reject_reason" class="form-control mt-2" style="display:none;" placeholder="Please specify reason"></textarea>
                                 </div>
-                              </div>
-                            </div>';
+                                
+                                <div class="form-group mt-3">
+                                  <button type="submit" class="btn btn-danger">Reject Return</button>
+                                  <button type="button" class="btn btn-secondary ml-2" id="cancelBtn' . $orderid . '_' . $prodid . '">Cancel</button>
+                                </div>
+                              </form>
+                            </div>
+
+                            <script>
+                              // When the document is loaded
+                              document.addEventListener("DOMContentLoaded", function() {
+                                // Toggle form visibility
+                                var rejectBtn = document.getElementById("rejectBtn' . $orderid . '_' . $prodid . '");
+                                var cancelBtn = document.getElementById("cancelBtn' . $orderid . '_' . $prodid . '");
+                                var formContainer = document.getElementById("rejectFormContainer' . $orderid . '_' . $prodid . '");
+                                var otherRadio = document.getElementById("reason4_' . $orderid . '_' . $prodid . '");
+                                var otherText = document.getElementById("other_reject_reason_' . $orderid . '_' . $prodid . '");
+                                var allRadios = document.querySelectorAll(\'#rejectForm' . $orderid . '_' . $prodid . ' input[name="reject_reason"]\');
+                                
+                                // Show the form when the reject button is clicked
+                                if (rejectBtn) {
+                                  rejectBtn.addEventListener("click", function() {
+                                    if (formContainer) {
+                                      formContainer.style.display = "block";
+                                    }
+                                  });
+                                }
+                                
+                                // Hide the form when the cancel button is clicked
+                                if (cancelBtn) {
+                                  cancelBtn.addEventListener("click", function() {
+                                    if (formContainer) {
+                                      formContainer.style.display = "none";
+                                    }
+                                  });
+                                }
+                                
+                                // Show/hide the "Other" text area based on radio selection
+                                if (allRadios.length > 0) {
+                                  allRadios.forEach(function(radio) {
+                                    radio.addEventListener("change", function() {
+                                      if (this.value === "other" && this.checked) {
+                                        if (otherText) {
+                                          otherText.style.display = "block";
+                                          otherText.setAttribute("required", "required");
+                                        }
+                                      } else {
+                                        if (otherText) {
+                                          otherText.style.display = "none";
+                                          otherText.removeAttribute("required");
+                                        }
+                                      }
+                                    });
+                                  });
+                                }
+                              });
+                            </script>';
                     } else {
                       echo '<p class="text-danger">Error: Could not fetch return request details.</p>';
                     }
@@ -717,51 +807,86 @@ if (isset($_POST['direct_reject'])) {
                     </button>
                   </form>
                   
-                  <!-- Cancel Button - Just a button to open modal -->
-                  <button type="button" class="btn btn-danger ml-2" data-toggle="modal" data-target="#cancelModal<?php echo htmlspecialchars($orderid); ?>">Cancel</button>
+                  <!-- Cancel Button - Just a button to open inline form -->
+                  <button type="button" class="btn btn-danger ml-2" id="cancelBtn<?php echo $orderid; ?>">Cancel</button>
                 </div>
                 
-                <!-- Cancel Order Modal - Completely separate form -->
-                <div class="modal fade" id="cancelModal<?php echo htmlspecialchars($orderid); ?>" tabindex="-1" role="dialog">
-                  <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                      <div class="modal-header">
-                        <h5 class="modal-title">Cancel Order #<?php echo htmlspecialchars($orderid); ?></h5>
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                          <span aria-hidden="true">&times;</span>
-                        </button>
+                <!-- Cancel Order Form - will be initially hidden -->
+                <div id="cancelFormContainer<?php echo $orderid; ?>" style="display:none; margin-top:15px; background-color:#f8f9fa; padding:15px; border-radius:5px; border:1px solid #dee2e6;">
+                  <form method="POST" action="order.php" id="cancelForm<?php echo $orderid; ?>">
+                    <div class="form-group">
+                      <label><strong>Please select a reason for cancellation:</strong></label>
+                      <div class="custom-control custom-radio mt-2">
+                        <input type="radio" id="reason1_<?php echo $orderid; ?>" name="cancel_reason" value="Can't deliver to your address" class="custom-control-input" required>
+                        <label class="custom-control-label" for="reason1_<?php echo $orderid; ?>">Can't deliver to your address</label>
                       </div>
-                      <form method="POST" action="order.php" id="cancelForm<?php echo htmlspecialchars($orderid); ?>">
-                        <div class="modal-body">
-                          <div class="form-group">
-                            <label><strong>Please select a reason for cancellation:</strong></label>
-                            <div class="custom-control custom-radio mt-2">
-                              <input type="radio" id="reason1_<?php echo htmlspecialchars($orderid); ?>" name="cancel_reason" value="Sorry, at this time can't able to deliver to your address" class="custom-control-input" required>
-                              <label class="custom-control-label" for="reason1_<?php echo htmlspecialchars($orderid); ?>">Sorry, at this time can't able to deliver to your address</label>
-                            </div>
-                            <div class="custom-control custom-radio mt-2">
-                              <input type="radio" id="reason2_<?php echo htmlspecialchars($orderid); ?>" name="cancel_reason" value="We are unable to reach out to you" class="custom-control-input">
-                              <label class="custom-control-label" for="reason2_<?php echo htmlspecialchars($orderid); ?>">We are unable to reach out to you</label>
-                            </div>
-                            <div class="custom-control custom-radio mt-2">
-                              <input type="radio" id="reason3_<?php echo htmlspecialchars($orderid); ?>" name="cancel_reason" value="Items are out of stock" class="custom-control-input">
-                              <label class="custom-control-label" for="reason3_<?php echo htmlspecialchars($orderid); ?>">Items are out of stock</label>
-                            </div>
-                            <div class="custom-control custom-radio mt-2">
-                              <input type="radio" id="reason4_<?php echo htmlspecialchars($orderid); ?>" name="cancel_reason" value="Other" class="custom-control-input">
-                              <label class="custom-control-label" for="reason4_<?php echo htmlspecialchars($orderid); ?>">Other (please specify)</label>
-                            </div>
-                            <textarea id="other_reason_<?php echo htmlspecialchars($orderid); ?>" name="other_reason" class="form-control mt-2" style="display: none;" placeholder="Please specify reason"></textarea>
-                          </div>
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                          <button type="submit" class="btn btn-danger" name="delete" value="<?php echo htmlspecialchars($orderid); ?>">Cancel Order</button>
-                        </div>
-                      </form>
+                      <div class="custom-control custom-radio mt-2">
+                        <input type="radio" id="reason2_<?php echo $orderid; ?>" name="cancel_reason" value="Unable to reach out to you" class="custom-control-input">
+                        <label class="custom-control-label" for="reason2_<?php echo $orderid; ?>">Unable to reach out to you</label>
+                      </div>
+                      <div class="custom-control custom-radio mt-2">
+                        <input type="radio" id="reason3_<?php echo $orderid; ?>" name="cancel_reason" value="Items out of stock" class="custom-control-input">
+                        <label class="custom-control-label" for="reason3_<?php echo $orderid; ?>">Items out of stock</label>
+                      </div>
+                      <div class="custom-control custom-radio mt-2">
+                        <input type="radio" id="reason4_<?php echo $orderid; ?>" name="cancel_reason" value="other" class="custom-control-input">
+                        <label class="custom-control-label" for="reason4_<?php echo $orderid; ?>">Other (please specify)</label>
+                      </div>
+                      <textarea id="other_reason_<?php echo $orderid; ?>" name="other_reason" class="form-control mt-2" style="display:none;" placeholder="Please specify reason"></textarea>
                     </div>
-                  </div>
+                    
+                    <div class="form-group mt-3">
+                      <button type="submit" class="btn btn-danger" name="delete" value="<?php echo $orderid; ?>">Cancel Order</button>
+                      <button type="button" class="btn btn-secondary ml-2" id="cancelCancelBtn<?php echo $orderid; ?>">Back</button>
+                    </div>
+                  </form>
                 </div>
+                
+                <!-- JavaScript for toggle cancel form -->
+                <script>
+                  document.addEventListener("DOMContentLoaded", function() {
+                    // Get elements
+                    var cancelBtn = document.getElementById("cancelBtn<?php echo $orderid; ?>");
+                    var cancelFormContainer = document.getElementById("cancelFormContainer<?php echo $orderid; ?>");
+                    var cancelCancelBtn = document.getElementById("cancelCancelBtn<?php echo $orderid; ?>");
+                    var otherRadio = document.getElementById("reason4_<?php echo $orderid; ?>");
+                    var otherText = document.getElementById("other_reason_<?php echo $orderid; ?>");
+                    var allRadios = document.querySelectorAll('#cancelForm<?php echo $orderid; ?> input[name="cancel_reason"]');
+                    
+                    // Show form when Cancel button is clicked
+                    if (cancelBtn) {
+                      cancelBtn.addEventListener("click", function() {
+                        if (cancelFormContainer) {
+                          cancelFormContainer.style.display = "block";
+                        }
+                      });
+                    }
+                    
+                    // Hide form when Back button is clicked
+                    if (cancelCancelBtn) {
+                      cancelCancelBtn.addEventListener("click", function() {
+                        if (cancelFormContainer) {
+                          cancelFormContainer.style.display = "none";
+                        }
+                      });
+                    }
+                    
+                    // Show/hide the "Other" text area based on radio selection
+                    if (allRadios.length > 0) {
+                      allRadios.forEach(function(radio) {
+                        radio.addEventListener("change", function() {
+                          if (this.value === "other" && this.checked && otherText) {
+                            otherText.style.display = "block";
+                            otherText.setAttribute("required", "required");
+                          } else if (otherText) {
+                            otherText.style.display = "none";
+                            otherText.removeAttribute("required");
+                          }
+                        });
+                      });
+                    }
+                  });
+                </script>
               <?php } else { ?>
                 <div class="text-muted">Order Completed</div>
               <?php } ?>
@@ -785,20 +910,19 @@ if (isset($_POST['direct_reject'])) {
   <script>
     // Auto-dismiss alert messages after 5 seconds
     $(document).ready(function() {
-      // Set timeout for alerts to fade out - only target alerts in the alertMessages container
+      // Set timeout for alerts to fade out
       setTimeout(function() {
         $('#alertMessages .alert').alert('close');
-      }, 5000); // 5000 milliseconds = 5 seconds
+      }, 5000);
       
-      // Prevent rejection modals from closing when clicking inside them
-      $('.modal').on('click', function(e) {
-        if ($(e.target).closest('.modal-content').length) {
-          e.stopPropagation();
-        }
+      // Bootstrap modal close handler - only for Bootstrap modals
+      $(document).on('click', '[data-dismiss="modal"]', function() {
+        $(this).closest('.modal').modal('hide');
+        $(".modal-backdrop").remove();
       });
       
-      // Show/hide other reason textarea based on radio selection for cancel
-      $('input[name="cancel_reason"]').change(function() {
+      // Show/hide other reason textarea for cancel
+      $(document).on('change', 'input[name="cancel_reason"]', function() {
         const orderId = $(this).attr('id').split('_')[1];
         if ($(this).val() === 'Other') {
           $('#other_reason_' + orderId).show();
@@ -808,20 +932,11 @@ if (isset($_POST['direct_reject'])) {
           $('#other_reason_' + orderId).removeAttr('required');
         }
       });
-      
-      // Show/hide other reason textarea based on radio selection for reject return
-      $('input[name="reject_reason"]').change(function() {
-        const idParts = $(this).attr('id').split('_');
-        const orderId = idParts[2];
-        const prodId = idParts[3];
-        if ($(this).val() === 'Other') {
-          $('#other_reject_reason_' + orderId + '_' + prodId).show();
-          $('#other_reject_reason_' + orderId + '_' + prodId).attr('required', 'required');
-        } else {
-          $('#other_reject_reason_' + orderId + '_' + prodId).hide();
-          $('#other_reject_reason_' + orderId + '_' + prodId).removeAttr('required');
-        }
-      });
+    });
+    
+    // Disable any hover events that might be causing unwanted modals
+    $('.card').each(function() {
+      $(this).off('mouseenter mouseleave mouseover mouseout');
     });
   </script>
 </body>

@@ -16,6 +16,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta http-equiv="Access-Control-Allow-Origin" content="*">
 
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
@@ -149,6 +150,14 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
     </div>
   </nav>
   <div class="container">
+    <?php 
+    // We'll use JavaScript alert instead of Bootstrap alert
+    if(isset($_GET['success'])) {
+        echo '<script>
+            alert("Product successfully added to your shop!");
+        </script>';
+    }
+    ?>
     <div class="container mt-4">
       <h3><b>Currently available Products </b><img src="https://img.icons8.com/pastel-glyph/64/000000/box--v2.png" />
       </h3>
@@ -172,7 +181,7 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
           </thead>
           <tbody>
             <?php while ($row = mysqli_fetch_array($results)) {
-                $img = "../assets/" . $row["prodname"] . "." . "png"; ?>
+                $img = "../assets/" . strtolower($row["prodname"]) . "." . "png"; ?>
             <tr>
               <form method="POST" action="insert.php">
                 <input name="proid" type="hidden" value="<?php echo $row[

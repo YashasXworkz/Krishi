@@ -144,7 +144,7 @@ $results = mysqli_query($conn, "SELECT * from myshop WHERE farmerid = '$fid'");
             "SELECT * from product WHERE prodid='$idprod'"
         );
         $row1 = mysqli_fetch_array($sql);
-        $img = "../assets/" . $row1["prodname"] . "." . "png";
+        $img = "../assets/" . strtolower($row1["prodname"]) . "." . "png";
         echo "<img src='{$img}' width='20%' height='30%'>";
         ?></td>
             <td><?php echo $row1["prodname"]; ?></td>

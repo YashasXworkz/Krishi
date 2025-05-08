@@ -213,7 +213,7 @@ if (isset($_POST["minus"])) {
           $total = $price * $row["cart_quantity"];
           $amount = $amount + $total;
           ?>
-          <td class="align-middle" width="auto"><img src="./assets/<?php echo $prodname; ?>.png" height="150px"
+          <td class="align-middle" width="auto"><img src="./assets/<?php echo strtolower($prodname); ?>.png" height="150px"
               width="175px" style="padding: 10px;"><span class="pl-5"
               style="font-size: 1.3em;"><?php echo $prodname; ?></span></td>
           <td class="align-middle" style="text-align: center;">₹<?php echo $price; ?></td>
